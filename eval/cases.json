@@ -1,0 +1,243 @@
+{
+  "note": "Written 2026-09-27 BEFORE any retrieval code existed. Expected provisions come from the legislation itself; a pick counts as correct if its ref equals an expected ref or is a sub-paragraph of one (\"UK GDPR Art. 6(1)\" matches \"UK GDPR Art. 6(1)(f)\"). Split fixed in advance: odd ids = dev (tuning allowed), even ids = held-out (reported only, never tuned on). Corrected 2026-09-27, still before any retrieval code existed: cases 10, 14 and 19 first named Articles 44/45, DPA s. 9 and Article 22, which the current text (as amended by the Data (Use and Access) Act 2025) replaces with Articles 44A/45A, 8ZA and 22A-22D. Ground truth is the law as fetched, not the author's memory of it.",
+  "cases": [
+    {
+      "id": 1,
+      "q": "Can we rely on legitimate interests to process customer data?",
+      "expect": [
+        "UK GDPR Art. 6(1)"
+      ]
+    },
+    {
+      "id": 2,
+      "q": "How long do we have to report a personal data breach to the ICO?",
+      "expect": [
+        "UK GDPR Art. 33"
+      ]
+    },
+    {
+      "id": 3,
+      "q": "When must we tell the affected individuals about a data breach?",
+      "expect": [
+        "UK GDPR Art. 34"
+      ]
+    },
+    {
+      "id": 4,
+      "q": "What is the right to be forgotten?",
+      "expect": [
+        "UK GDPR Art. 17"
+      ]
+    },
+    {
+      "id": 5,
+      "q": "How quickly must we respond to a subject access request?",
+      "expect": [
+        "UK GDPR Art. 12",
+        "UK GDPR Art. 15"
+      ]
+    },
+    {
+      "id": 6,
+      "q": "Do we need to appoint a data protection officer?",
+      "expect": [
+        "UK GDPR Art. 37"
+      ]
+    },
+    {
+      "id": 7,
+      "q": "When is a data protection impact assessment required?",
+      "expect": [
+        "UK GDPR Art. 35"
+      ]
+    },
+    {
+      "id": 8,
+      "q": "What counts as special category data?",
+      "expect": [
+        "UK GDPR Art. 9"
+      ]
+    },
+    {
+      "id": 9,
+      "q": "What condition lets an employer process health data about staff?",
+      "expect": [
+        "DPA 2018 Sch. 1 para. 1",
+        "UK GDPR Art. 9"
+      ]
+    },
+    {
+      "id": 10,
+      "q": "Can we send personal data to a supplier outside the UK?",
+      "expect": [
+        "UK GDPR Art. 44A",
+        "UK GDPR Art. 45A",
+        "UK GDPR Art. 46"
+      ]
+    },
+    {
+      "id": 11,
+      "q": "What must a contract with a data processor include?",
+      "expect": [
+        "UK GDPR Art. 28"
+      ]
+    },
+    {
+      "id": 12,
+      "q": "What information do we have to give people when we collect their data?",
+      "expect": [
+        "UK GDPR Art. 13",
+        "UK GDPR Art. 14"
+      ]
+    },
+    {
+      "id": 13,
+      "q": "What is the maximum fine for breaking data protection law?",
+      "expect": [
+        "UK GDPR Art. 83",
+        "DPA 2018 s. 157"
+      ]
+    },
+    {
+      "id": 14,
+      "q": "From what age can a child consent to an online service?",
+      "expect": [
+        "UK GDPR Art. 8",
+        "UK GDPR Art. 8ZA"
+      ]
+    },
+    {
+      "id": 15,
+      "q": "What records of our processing activities must we keep?",
+      "expect": [
+        "UK GDPR Art. 30"
+      ]
+    },
+    {
+      "id": 16,
+      "q": "What are the data protection principles?",
+      "expect": [
+        "UK GDPR Art. 5"
+      ]
+    },
+    {
+      "id": 17,
+      "q": "What makes consent valid?",
+      "expect": [
+        "UK GDPR Art. 7",
+        "UK GDPR Art. 4(1)(11)"
+      ]
+    },
+    {
+      "id": 18,
+      "q": "Can someone stop us sending them direct marketing?",
+      "expect": [
+        "UK GDPR Art. 21"
+      ]
+    },
+    {
+      "id": 19,
+      "q": "Are there rules on decisions made about people entirely by computer?",
+      "expect": [
+        "UK GDPR Art. 22A",
+        "UK GDPR Art. 22B",
+        "UK GDPR Art. 22C"
+      ]
+    },
+    {
+      "id": 20,
+      "q": "What security measures does the law require?",
+      "expect": [
+        "UK GDPR Art. 32"
+      ]
+    },
+    {
+      "id": 21,
+      "q": "What is the right to data portability?",
+      "expect": [
+        "UK GDPR Art. 20"
+      ]
+    },
+    {
+      "id": 22,
+      "q": "Can a customer ask us to correct wrong information we hold about them?",
+      "expect": [
+        "UK GDPR Art. 16"
+      ]
+    },
+    {
+      "id": 23,
+      "q": "When can someone ask us to restrict processing of their data?",
+      "expect": [
+        "UK GDPR Art. 18"
+      ]
+    },
+    {
+      "id": 24,
+      "q": "What are the Information Commissioner's tasks?",
+      "expect": [
+        "UK GDPR Art. 57",
+        "DPA 2018 s. 115"
+      ]
+    },
+    {
+      "id": 25,
+      "q": "What is the legal definition of personal data?",
+      "expect": [
+        "UK GDPR Art. 4(1)(1)",
+        "DPA 2018 s. 3"
+      ]
+    },
+    {
+      "id": 26,
+      "q": "Can we process information about criminal convictions?",
+      "expect": [
+        "UK GDPR Art. 10",
+        "DPA 2018 s. 10"
+      ]
+    },
+    {
+      "id": 27,
+      "q": "Is there an exemption for journalism?",
+      "expect": [
+        "DPA 2018 Sch. 2 para. 26"
+      ]
+    },
+    {
+      "id": 28,
+      "q": "What is data protection by design and by default?",
+      "expect": [
+        "UK GDPR Art. 25"
+      ]
+    },
+    {
+      "id": 29,
+      "q": "Can we charge a fee for handling a subject access request?",
+      "expect": [
+        "UK GDPR Art. 12",
+        "UK GDPR Art. 15"
+      ]
+    },
+    {
+      "id": 30,
+      "q": "What are the responsibilities of joint controllers?",
+      "expect": [
+        "UK GDPR Art. 26"
+      ]
+    },
+    {
+      "id": 31,
+      "q": "What does Article 6(1)(f) say?",
+      "expect": [
+        "UK GDPR Art. 6(1)"
+      ]
+    },
+    {
+      "id": 32,
+      "q": "What does section 170 of the Data Protection Act say?",
+      "expect": [
+        "DPA 2018 s. 170"
+      ]
+    }
+  ]
+}
