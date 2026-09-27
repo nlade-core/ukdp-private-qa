@@ -1,11 +1,12 @@
 {
-  "note": "Written 2026-09-27 BEFORE any retrieval code existed. Expected provisions come from the legislation itself; a pick counts as correct if its ref equals an expected ref or is a sub-paragraph of one (\"UK GDPR Art. 6(1)\" matches \"UK GDPR Art. 6(1)(f)\"). Split fixed in advance: odd ids = dev (tuning allowed), even ids = held-out (reported only, never tuned on). Corrected 2026-09-27, still before any retrieval code existed: cases 10, 14 and 19 first named Articles 44/45, DPA s. 9 and Article 22, which the current text (as amended by the Data (Use and Access) Act 2025) replaces with Articles 44A/45A, 8ZA and 22A-22D. Ground truth is the law as fetched, not the author's memory of it.",
+  "note": "Written 2026-09-27 BEFORE any retrieval code existed. Expected provisions come from the legislation itself; a pick counts as correct if its ref equals an expected ref or is a sub-paragraph of one (\"UK GDPR Art. 6(1)\" matches \"UK GDPR Art. 6(1)(f)\"). Split fixed in advance: odd ids = dev (tuning allowed), even ids = held-out (reported only, never tuned on). Corrected 2026-09-27, still before any retrieval code existed: cases 10, 14 and 19 first named Articles 44/45, DPA s. 9 and Article 22, which the current text (as amended by the Data (Use and Access) Act 2025) replaces with Articles 44A/45A, 8ZA and 22A-22D. Ground truth is the law as fetched, not the author's memory of it. Changed AFTER seeing a result (dev set only, recorded for transparency): case 1 also accepts Art. 6(11), which lists examples of processing necessary for legitimate interests -- the first run picked it, and on reading it is a correct answer the original expectation missed.",
   "cases": [
     {
       "id": 1,
       "q": "Can we rely on legitimate interests to process customer data?",
       "expect": [
-        "UK GDPR Art. 6(1)"
+        "UK GDPR Art. 6(1)",
+        "UK GDPR Art. 6(11)"
       ]
     },
     {

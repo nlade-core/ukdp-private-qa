@@ -28,6 +28,26 @@ ACTS = {'uk-gdpr': 'UK GDPR', 'dpa-2018': 'DPA 2018'}
 SKIP = {'Commentary', 'CommentaryRef', 'Commentaries', 'Footnote', 'FootnoteRef', 'MarginNote'}
 CONTAINERS = {'Division', 'Part', 'Chapter', 'Pblock', 'PsubBlock', 'Schedule', 'EUPart', 'EUTitle', 'EUChapter', 'EUSection', 'EUSubsection'}
 LEVELS = ('P2', 'P3', 'P4', 'P5')
+# Which regime a DPA 2018 provision belongs to, from the Act's own structure.
+# Parts 3 and 4 re-use UK GDPR headings but apply only to law-enforcement
+# bodies and the intelligence services; Schedule 19 amends other Acts;
+# Schedules 20-21 are transitional. Retrieval keeps those out of the way
+# unless a question is about them (see retrieval.js).
+SCOPES = [
+    (r'^PART 3\b|^SCHEDULE (7|8)$', 'law-enforcement'),
+    (r'^PART 4\b|^SCHEDULE (9|10|11)$', 'intelligence'),
+    (r'^SCHEDULE 19$', 'amendments'),
+    (r'^SCHEDULE (20|21)$', 'transitional'),
+]
+
+
+def scope_of(act, path):
+    top = path.split(' › ')[0]
+    if act == 'dpa-2018':
+        for pattern, scope in SCOPES:
+            if re.search(pattern, top):
+                return scope
+    return 'general'
 
 
 def local(tag):
@@ -46,7 +66,10 @@ def inline(el):
 
 
 def clean(s):
-    return re.sub(r'[ \t]+', ' ', s).strip()
+    # Non-breaking and other odd spaces become plain ones -- Schedule 21's
+    # heading is "SCHEDULE\u00a021", which silently defeated the regime
+    # labelling below until the eval caught it.
+    return re.sub(r'[ \t\u00a0\u2000-\u200b\u202f]+', ' ', s).strip()
 
 
 def render(el, depth=0):
@@ -123,7 +146,7 @@ def parse(act, path):
         if len(text) > MAX_CHARS:
             units = split(p1)
         for u_uri, u_text in units:
-            rows.append((act, make_ref(act, u_uri), title, path_label, u_text, u_uri.replace('http://', 'https://')))
+            rows.append((act, make_ref(act, u_uri), title, path_label, u_text, u_uri.replace('http://', 'https://'), scope_of(act, path_label)))
     return rows
 
 
@@ -157,11 +180,11 @@ def build():
         os.remove(OUT)
     db = sqlite3.connect(OUT)
     db.executescript("""
-        CREATE TABLE provisions(id INTEGER PRIMARY KEY, act TEXT, ref TEXT, title TEXT, path TEXT, text TEXT, url TEXT);
+        CREATE TABLE provisions(id INTEGER PRIMARY KEY, act TEXT, ref TEXT, title TEXT, path TEXT, text TEXT, url TEXT, scope TEXT);
         CREATE VIRTUAL TABLE provisions_fts USING fts5(title, path, text, content='provisions', content_rowid='id', tokenize='porter unicode61');
         CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT);
     """)
-    db.executemany('INSERT INTO provisions(act, ref, title, path, text, url) VALUES (?,?,?,?,?,?)', rows)
+    db.executemany('INSERT INTO provisions(act, ref, title, path, text, url, scope) VALUES (?,?,?,?,?,?,?)', rows)
     db.execute("INSERT INTO provisions_fts(provisions_fts) VALUES('rebuild')")
     fetched = datetime.datetime.fromtimestamp(min(os.path.getmtime(p) for p in paths.values()), datetime.UTC).strftime('%Y-%m-%d')
     db.executemany('INSERT INTO meta VALUES (?,?)', [
@@ -185,6 +208,7 @@ def report(rows):
     print('rows: %d  (%s)' % (len(rows), ', '.join('%s %d' % (ACTS[a], sum(1 for r in rows if r[0] == a)) for a in ACTS)))
     print('size: %.2f MB raw, %.2f MB gzipped' % (raw / 1e6, gz / 1e6))
     print('longest row: %d chars (%s)' % max((len(r[4]), r[1]) for r in rows))
+    print('scopes:', ', '.join('%s %d' % (sc, sum(1 for r in rows if r[6] == sc)) for sc in ('general', 'law-enforcement', 'intelligence', 'amendments', 'transitional')))
     db = sqlite3.connect(OUT)
     for ref in ('UK GDPR Art. 6', 'UK GDPR Art. 4(1)(7)', 'DPA 2018 s. 64', 'DPA 2018 Sch. 1 para. 6'):
         r = db.execute('SELECT ref, title, path, substr(text, 1, 160) FROM provisions WHERE ref = ?', (ref,)).fetchone()
