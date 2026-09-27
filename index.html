@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UK Data Protection Law, Privately</title>
+<meta name="description" content="Ask questions about the UK GDPR and Data Protection Act 2018. Answered entirely on your device: the law is a local SQLite file, the model is Chrome's built-in one, and nothing you ask is sent anywhere.">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<header>
+  <h1>UK data protection law, answered privately</h1>
+  <p class="lede">Ask about the UK GDPR or the Data Protection Act 2018. The law is a small database in this page and the model is built into Chrome, so <strong>nothing you ask leaves your device</strong>.</p>
+  <p class="meta"><span id="net-count" class="net">—</span> · <span id="mode"></span></p>
+</header>
+
+<main>
+  <section class="ask-pane">
+    <form id="ask" autocomplete="off">
+      <label for="q" class="visually-hidden">Your question</label>
+      <input id="q" type="text" placeholder="e.g. How long do we have to report a data breach?" required>
+      <button id="ask-btn" type="submit" disabled>Ask</button>
+    </form>
+    <div class="examples" aria-label="Example questions">
+      <button type="button" class="example">Can we rely on legitimate interests for marketing?</button>
+      <button type="button" class="example">How long do we have to report a personal data breach?</button>
+      <button type="button" class="example">What does Article 17 say?</button>
+    </div>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+
+    <div id="answer-wrap" hidden>
+      <p class="cite-line"><span id="cite" class="cite"></span> <span id="how" class="how"></span></p>
+      <div id="answer" class="answer" aria-live="polite"></div>
+      <p class="disclaimer">General information from the text of the law, not legal advice. Check the provision itself.</p>
+      <div id="others-wrap" hidden>
+        <h3>Other relevant provisions</h3>
+        <ul id="others" class="others"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="provision" class="prov-pane" hidden>
+    <p class="prov-path" id="prov-path"></p>
+    <h2><span id="prov-ref"></span> <span id="prov-title" class="prov-title"></span></h2>
+    <div id="prov-text" class="prov-text"></div>
+    <p><a id="prov-link" href="#" target="_blank" rel="noopener">View on legislation.gov.uk</a></p>
+  </section>
+</main>
+
+<footer>
+  <p>Text of the UK GDPR and Data Protection Act 2018 from legislation.gov.uk, fetched <span id="fetched"></span>; it may not reflect every amendment in force. Contains public sector information licensed under the Open Government Licence v3.0.</p>
+  <p>How it works: full-text search (SQLite, running in this page) finds candidate provisions; Chrome's on-device model picks the one that answers your question and writes an answer from its text. <a href="https://github.com/nlade-core/ukdp-private-qa" target="_blank" rel="noopener">Source and accuracy results</a> (MIT).</p>
+</footer>
+</body>
+</html>

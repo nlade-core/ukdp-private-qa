@@ -49,14 +49,20 @@ export function explicitRefs(question) {
 export function createRetriever(db, { pickModel = null } = {}) {
   const rowCols = 'p.id, p.act, p.ref, p.title, p.path, p.text, p.url, p.scope';
 
-  // The most specific existing row for a cited ref: "Art. 6(1)(f)" may only
-  // exist as "Art. 6(1)" (the paragraph holds its points), and "Art. 6" only
-  // as its paragraphs "Art. 6(1)", "Art. 6(2)"… -- take the first of those.
+  // The most specific existing text for a cited ref. "Art. 6(1)(f)" may only
+  // exist as "Art. 6(1)" (the paragraph holds its points). A long article is
+  // stored split into its paragraphs, so "Article 17" is reassembled from
+  // "Art. 17(1)", "Art. 17(2)"… -- someone citing a whole article wants all
+  // of it (the page shows it in full; the model gets the first ~3,000 chars).
   function lookupRef(ref) {
     let r = ref;
     for (;;) {
-      const row = db.selectObject('SELECT ' + rowCols + ' FROM provisions p WHERE p.ref = ? OR p.ref LIKE ? ORDER BY (p.ref = ?) DESC, p.id LIMIT 1', [r, r + '(%', r]);
-      if (row) return row;
+      const exact = db.selectObject('SELECT ' + rowCols + ' FROM provisions p WHERE p.ref = ?', [r]);
+      if (exact) return exact;
+      const parts = db.selectObjects('SELECT ' + rowCols + ' FROM provisions p WHERE p.ref LIKE ? ORDER BY p.id', [r + '(%']);
+      if (parts.length) {
+        return { ...parts[0], ref: r, text: parts.map((x) => x.text).join('\n'), url: parts[0].url.replace(/\/[^/]+$/, ''), parts: parts.length };
+      }
       const shorter = r.replace(/\([^()]*\)$/, '');
       if (shorter === r) return null;
       r = shorter;
