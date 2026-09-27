@@ -1,0 +1,26 @@
+{
+  "note": "Written 2026-09-27 BEFORE any ICO data was parsed or any guidance/enforcement retrieval code existed. Same split rule as cases.json: odd ids = dev (tuning allowed), even ids = held-out (reported only). Plain-English questions (33-44) avoid the law's own wording on purpose -- they test whether ICO guidance bridges the vocabulary gap; 'expect' = law provisions a correct answer should cite (same matching rule as cases.json). Enforcement questions (45-52) have factual answers: 'truth' is derived from the fetched data by eval/derive_ico_truth.py (independent SQL, not the retrieval code) and fixed before retrieval runs on them.",
+  "cases": [
+    { "id": 33, "q": "Can a customer make us fix mistakes in their details?", "expect": ["UK GDPR Art. 16"] },
+    { "id": 34, "q": "Someone wants a copy of everything we hold on them. What do we have to give them?", "expect": ["UK GDPR Art. 15"] },
+    { "id": 35, "q": "Can a former employee make us delete their records?", "expect": ["UK GDPR Art. 17"] },
+    { "id": 36, "q": "Do we need someone's permission before we use their data?", "expect": ["UK GDPR Art. 6(1)", "UK GDPR Art. 7"] },
+    { "id": 37, "q": "A laptop with customer records on it was stolen. What do we have to do?", "expect": ["UK GDPR Art. 33", "UK GDPR Art. 34"] },
+    { "id": 38, "q": "Can our payroll provider use our staff data for its own purposes?", "expect": ["UK GDPR Art. 28", "UK GDPR Art. 29"] },
+    { "id": 39, "q": "How long can we keep job applicants' CVs?", "expect": ["UK GDPR Art. 5"] },
+    { "id": 40, "q": "Do we have to encrypt the personal data we hold?", "expect": ["UK GDPR Art. 32"] },
+    { "id": 41, "q": "Can someone stop us using their data to build a profile of them?", "expect": ["UK GDPR Art. 21", "UK GDPR Art. 22A", "UK GDPR Art. 22B", "UK GDPR Art. 22C"] },
+    { "id": 42, "q": "What can we do if one person keeps sending us unreasonable requests?", "expect": ["UK GDPR Art. 12"] },
+    { "id": 43, "q": "Can we share customer data with a company in the US?", "expect": ["UK GDPR Art. 44A", "UK GDPR Art. 45A", "UK GDPR Art. 46"] },
+    { "id": 44, "q": "Do small businesses have to keep a record of the data they process?", "expect": ["UK GDPR Art. 30"] },
+
+    { "id": 45, "q": "What was the largest fine the ICO issued in 2025?", "kind": "enforcement", "truth": null },
+    { "id": 46, "q": "Which companies were fined for nuisance calls in 2026?", "kind": "enforcement", "truth": null },
+    { "id": 47, "q": "How many reprimands did the ICO issue in 2024?", "kind": "enforcement", "truth": null },
+    { "id": 48, "q": "Has the ICO fined anyone under UK GDPR for a cyber attack or security failure?", "kind": "enforcement", "truth": null },
+    { "id": 49, "q": "What was the total value of ICO fines in 2024?", "kind": "enforcement", "truth": null },
+    { "id": 50, "q": "Which organisations received enforcement notices in 2025?", "kind": "enforcement", "truth": null },
+    { "id": 51, "q": "What is the largest UK GDPR fine in the data?", "kind": "enforcement", "truth": null },
+    { "id": 52, "q": "Has the ICO taken action against any NHS or health organisation?", "kind": "enforcement", "truth": null }
+  ]
+}
