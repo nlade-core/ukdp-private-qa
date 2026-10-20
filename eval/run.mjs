@@ -13,12 +13,14 @@ import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import sqlite3InitModule from '../vendor/sqlite-wasm/node.mjs';
 import { openDb, createRetriever, PICK_SYSTEM_PROMPT, pickPrompt, parsePick } from '../retrieval.js';
+import { hasIco, bridgeRefs } from '../ico.js';
 
 const arg = (name, dflt) => { const i = process.argv.indexOf('--' + name); return i > 0 ? process.argv[i + 1] : dflt; };
 const MODEL = arg('model', 'gemma4:e4b');
 const RUNS = Number(arg('runs', 1));
 const USE_MODEL = !process.argv.includes('--no-model');
 const SHOW_HELDOUT = process.argv.includes('--show-heldout');
+const USE_BRIDGE = !process.argv.includes('--no-bridge');
 const OLLAMA = process.env.OLLAMA_HOST || 'http://localhost:11434';
 
 let noThink = true;
@@ -38,14 +40,18 @@ async function pickModel(question, candidates) {
 const root = new URL('..', import.meta.url);
 const sqlite3 = await sqlite3InitModule({ print: () => {}, printErr: () => {} });
 const db = await openDb(sqlite3, new Uint8Array(gunzipSync(readFileSync(new URL('data/ukdp.sqlite.gz', root)))));
-const retriever = createRetriever(db, { pickModel: USE_MODEL ? pickModel : null });
-const { cases } = JSON.parse(readFileSync(new URL('eval/cases.json', root), 'utf8'));
+const bridge = USE_BRIDGE && hasIco(db) ? (q) => bridgeRefs(db, q) : null;
+const retriever = createRetriever(db, { pickModel: USE_MODEL ? pickModel : null, bridge });
+// Law questions from both files; enforcement questions (kind: enforcement) are scored by eval/run_ico.mjs.
+const cases = [...JSON.parse(readFileSync(new URL('eval/cases.json', root), 'utf8')).cases,
+  ...JSON.parse(readFileSync(new URL('eval/cases_ico.json', root), 'utf8')).cases.filter((c) => !c.kind)];
 
 const matches = (ref, expect) => expect.some((e) => ref === e || ref.startsWith(e + '('));
-const sets = { dev: { n: 0, at1: 0, at3: 0, ms: [], stages: {} }, 'held-out': { n: 0, at1: 0, at3: 0, ms: [], stages: {} } };
-console.log('model stand-in:', USE_MODEL ? MODEL : '(none)', '| runs per case:', RUNS, '\n');
+const blank = () => ({ n: 0, at1: 0, at3: 0, ms: [], stages: {} });
+const sets = { dev: blank(), 'held-out': blank(), 'plain dev': blank(), 'plain held': blank() };
+console.log('model stand-in:', USE_MODEL ? MODEL : '(none)', '| guidance bridge:', bridge ? 'on' : 'off', '| runs per case:', RUNS, '\n');
 for (const c of cases) {
-  const set = c.id % 2 ? 'dev' : 'held-out';
+  const set = c.id > 32 ? (c.id % 2 ? 'plain dev' : 'plain held') : (c.id % 2 ? 'dev' : 'held-out');
   for (let r = 0; r < RUNS; r++) {
     const res = await retriever.search(c.q, { atSend: true });
     const ranked = res.pick ? [res.pick, ...res.candidates.filter((x) => x.id !== res.pick.id)] : [];
@@ -53,14 +59,15 @@ for (const c of cases) {
     const at3 = ranked.slice(0, 3).some((x) => matches(x.ref, c.expect));
     const s = sets[set];
     s.n++; s.at1 += at1; s.at3 += at3; s.ms.push(res.ms); s.stages[res.stage] = (s.stages[res.stage] || 0) + 1;
-    if (set === 'dev' || SHOW_HELDOUT) {
-      console.log(String(c.id).padStart(2), set === 'dev' ? 'dev ' : 'HOLD', at1 ? '✓' : at3 ? '~' : '✗', res.stage.padEnd(9),
+    if (set === 'dev' || set === 'plain dev' || SHOW_HELDOUT) {
+      console.log(String(c.id).padStart(2), set.includes('dev') ? 'dev ' : 'HOLD', at1 ? '✓' : at3 ? '~' : '✗', res.stage.padEnd(9),
         (res.pick ? res.pick.ref + ' — ' + res.pick.title : '-').slice(0, 58).padEnd(58), String(res.ms).padStart(5) + 'ms', '|', c.q.slice(0, 60), at1 ? '' : '  (want ' + c.expect.join(' / ') + ')');
     }
   }
 }
 console.log('');
 for (const [name, s] of Object.entries(sets)) {
+  if (!s.n) continue;
   const med = s.ms.slice().sort((a, b) => a - b)[Math.floor(s.ms.length / 2)];
-  console.log(name.padEnd(9), 'hit@1', (s.at1 + '/' + s.n).padEnd(6), 'hit@3', (s.at3 + '/' + s.n).padEnd(6), 'median', med + 'ms', '| stages', JSON.stringify(s.stages));
+  console.log(name.padEnd(10), 'hit@1', (s.at1 + '/' + s.n).padEnd(6), 'hit@3', (s.at3 + '/' + s.n).padEnd(6), 'median', med + 'ms', '| stages', JSON.stringify(s.stages));
 }

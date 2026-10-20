@@ -7,9 +7,9 @@ Licence v3.0, except where otherwise stated." robots.txt asks for a 6-second
 crawl delay, which is honoured between every request. Everything is cached in
 build/cache/ico/ (gitignored); a re-run only fetches what's missing.
 
-Scope: every dated enforcement action, the PDF notice for each monetary
-penalty (the amount is only in the notice), and the core UK GDPR guidance
-sections that map onto the law.
+Scope: every dated enforcement action and its PDF notice (the amount, the
+law breached and the articles cited are often only in the notice), and the
+core UK GDPR guidance sections that map onto the law.
 """
 import html
 import os
@@ -75,7 +75,7 @@ def main():
         get(u, os.path.join(CACHE, kind, slug(u) + '.html'), log)
         if i % 25 == 0:
             print('%d/%d pages' % (i, len(todo)), flush=True)
-    # Penalty notices: the amount is only stated in the PDF.
+    # Notices: the amount, the regime and the articles breached are often only in the PDF.
     pdfs = []
     for u in enforcement:
         p = os.path.join(CACHE, 'enforcement', slug(u) + '.html')
@@ -83,11 +83,9 @@ def main():
             continue
         page = open(p, encoding='utf-8', errors='ignore').read()
         text = re.sub(r'\s+', ' ', html.unescape(re.sub(r'<[^>]+>', ' ', page)))
-        m = re.search(r'\bType (.+?) Sector\b', text)
-        if m and 'penalt' in m.group(1).lower():
-            for href in re.findall(r'href="([^"]+\.pdf)"', page)[:1]:
-                pdfs.append(href if href.startswith('http') else 'https://ico.org.uk' + href)
-    print('%d penalty notices' % len(pdfs), flush=True)
+        for href in re.findall(r'href="([^"]+\.pdf)"', page)[:1]:
+            pdfs.append(href if href.startswith('http') else 'https://ico.org.uk' + href)
+    print('%d notices' % len(pdfs), flush=True)
     for i, u in enumerate(pdfs, 1):
         get(u, os.path.join(CACHE, 'pdf', re.sub(r'[^a-z0-9.]+', '-', u.rsplit('/', 1)[-1].lower())), log)
         if i % 25 == 0:

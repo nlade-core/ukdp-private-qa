@@ -13,7 +13,7 @@
 <body>
 <header>
   <h1>UK data protection law, answered privately</h1>
-  <p class="lede">Ask about the UK GDPR or the Data Protection Act 2018. The law is a small database in this page and the model is built into Chrome, so <strong>nothing you ask leaves your device</strong>.</p>
+  <p class="lede">Ask about the UK GDPR or the Data Protection Act 2018 — in plain English — or about the ICO's fines and other enforcement. The law, the ICO's guidance and its enforcement record are a small database in this page, and the model is built into Chrome, so <strong>nothing you ask leaves your device</strong>.</p>
   <p class="meta"><span id="net-count" class="net">—</span> · <span id="mode"></span></p>
 </header>
 
@@ -27,6 +27,8 @@
     <div class="examples" aria-label="Example questions">
       <button type="button" class="example">Can we rely on legitimate interests for marketing?</button>
       <button type="button" class="example">How long do we have to report a personal data breach?</button>
+      <button type="button" class="example">Can a customer make us fix mistakes in their details?</button>
+      <button type="button" class="example">What was the largest fine the ICO issued in 2025?</button>
       <button type="button" class="example">What does Article 17 say?</button>
     </div>
     <p id="status" class="status" role="status" aria-live="polite"></p>
@@ -40,6 +42,17 @@
         <ul id="others" class="others"></ul>
       </div>
     </div>
+    <div id="enforcement-wrap" hidden>
+      <p id="e-headline" class="answer"></p>
+      <ul id="e-list" class="actions"></ul>
+      <p id="e-more" class="disclaimer"></p>
+      <div id="e-breached-wrap" hidden>
+        <h3>Provisions these actions cite most</h3>
+        <div id="e-breached" class="examples"></div>
+      </div>
+      <details class="sql"><summary>The exact query that produced this</summary><pre id="e-sql"></pre></details>
+      <p class="disclaimer">Figures come straight from the ICO's published enforcement data, not from the model. Amounts are read from each notice; follow the links to check.</p>
+    </div>
   </section>
 
   <section id="provision" class="prov-pane" hidden>
@@ -47,11 +60,24 @@
     <h2><span id="prov-ref"></span> <span id="prov-title" class="prov-title"></span></h2>
     <div id="prov-text" class="prov-text"></div>
     <p><a id="prov-link" href="#" target="_blank" rel="noopener">View on legislation.gov.uk</a></p>
+
+    <div id="guidance" class="guidance" hidden>
+      <h3>ICO guidance</h3>
+      <p id="g-review" class="review" hidden>The ICO marks this guidance as under review following the Data (Use and Access) Act 2025 — check the current version.</p>
+      <p id="g-title" class="g-title"></p>
+      <div id="g-text" class="prov-text g-text"></div>
+      <p><a id="g-link" href="#" target="_blank" rel="noopener">Read on ico.org.uk</a></p>
+    </div>
+
+    <div id="related" hidden>
+      <h3>ICO enforcement citing this provision</h3>
+      <ul id="related-list" class="actions"></ul>
+    </div>
   </section>
 </main>
 
 <footer>
-  <p>Text of the UK GDPR and Data Protection Act 2018 from legislation.gov.uk, fetched <span id="fetched"></span>; it may not reflect every amendment in force. Contains public sector information licensed under the Open Government Licence v3.0.</p>
+  <p>Text of the UK GDPR and Data Protection Act 2018 from legislation.gov.uk, fetched <span id="fetched"></span>; it may not reflect every amendment in force. ICO guidance and enforcement data from ico.org.uk. Contains public sector information licensed under the Open Government Licence v3.0.</p>
   <p>How it works: full-text search (SQLite, running in this page) finds candidate provisions; Chrome's on-device model picks the one that answers your question and writes an answer from its text. <a href="https://github.com/nlade-core/ukdp-private-qa" target="_blank" rel="noopener">Source and accuracy results</a> (MIT).</p>
 </footer>
 </body>

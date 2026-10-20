@@ -46,7 +46,11 @@ export function explicitRefs(question) {
   return out;
 }
 
-export function createRetriever(db, { pickModel = null } = {}) {
+// `bridge(question)` (optional) returns law refs that plain-English sources
+// point at -- ICO guidance matching "fix mistakes in my details" cites
+// Article 16, which the law's own wording ("rectification") never matches.
+// Those provisions join the candidates the model chooses from.
+export function createRetriever(db, { pickModel = null, bridge = null } = {}) {
   const rowCols = 'p.id, p.act, p.ref, p.title, p.path, p.text, p.url, p.scope';
 
   // The most specific existing text for a cited ref. "Art. 6(1)(f)" may only
@@ -134,14 +138,17 @@ export function createRetriever(db, { pickModel = null } = {}) {
       const def = definitionRow(question);
       if (def) return done('definition', def, [def, ...fts(queryTerms(question), question).filter((r) => r.id !== def.id)]);
       const terms = queryTerms(question);
-      const candidates = fts(terms, question);
+      const ranked = fts(terms, question);
+      if (ranked.length && titleStrength(ranked[0], terms) >= 0.5) return done('title', ranked[0], ranked);
+      const bridged = bridge ? bridge(question).map(lookupRef).filter(Boolean).map((r) => ({ ...r, bridged: true })) : [];
+      const seen = new Set();
+      const candidates = [...bridged, ...ranked].filter((r) => !seen.has(r.ref) && seen.add(r.ref)).slice(0, CANDIDATES);
       if (!candidates.length) return done('none', null, []);
-      if (titleStrength(candidates[0], terms) >= 0.5) return done('title', candidates[0], candidates);
       if (atSend && pickModel) {
         const i = await pickModel(question, candidates).catch(() => null);
         if (Number.isInteger(i) && i >= 0 && i < candidates.length) return done('model', candidates[i], candidates);
       }
-      return done('rank', candidates[0], candidates);
+      return done('rank', ranked[0] || candidates[0], candidates);
     },
   };
 }

@@ -2,6 +2,7 @@
 import sqlite3InitModule from './vendor/sqlite-wasm/index.mjs';
 import { openDb, createRetriever, cutAtBoundary } from './retrieval.js';
 import { modelStatus, pickModel, answer } from './model.js';
+import { hasIco, bridgeRefs, guidanceFor, baseRef, enforcementIntent, runEnforcement, describeEnforcement, gbp } from './ico.js';
 
 const $ = (id) => document.getElementById(id);
 const DB_URL = 'data/ukdp.sqlite.gz';
@@ -9,11 +10,13 @@ const STAGE_LABEL = {
   reference: 'found by the reference you cited',
   definition: 'found as the legal definition',
   title: "found by the provision's heading",
-  model: 'chosen by the on-device model from the closest matches',
+  model: 'chosen by the on-device model from the closest matches (law, and the law ICO guidance points to)',
   rank: 'best full-text match',
 };
 
 let retriever = null;
+let db = null;
+let ico = false;
 let modelOk = false;
 let current = null; // { question, result }
 let abort = null;
@@ -57,6 +60,40 @@ function showProvision(row) {
   $('provision').hidden = false;
 }
 
+// The ICO's plain-English guidance for this provision, if any cites it.
+function showGuidance(question, provision) {
+  const g = ico ? guidanceFor(db, provision.ref, question) : null;
+  $('guidance').hidden = !g;
+  $('g-review').hidden = !(g && g.under_review);
+  if (!g) return null;
+  $('g-title').textContent = g.title + (g.section ? ' › ' + g.section : '');
+  $('g-text').textContent = g.text;
+  $('g-link').href = g.url;
+  $('g-review').hidden = !g.under_review;
+  return g;
+}
+
+// ICO enforcement actions that cite this provision's article.
+function showRelatedEnforcement(provision) {
+  const box = $('related');
+  if (!ico) { box.hidden = true; return; }
+  const base = baseRef(provision.ref);
+  const rows = db.selectObjects("SELECT DISTINCT e.org, e.date, e.type, e.amount_gbp, e.url FROM links l JOIN enforcement e ON e.id = l.src_id WHERE l.kind = 'enforcement' AND (l.ref = ? OR l.ref LIKE ?) ORDER BY e.amount_gbp IS NULL, e.amount_gbp DESC, e.date DESC LIMIT 5", [base, base + '(%']);
+  box.hidden = !rows.length;
+  const list = $('related-list');
+  list.innerHTML = '';
+  for (const r of rows) list.append(actionItem(r));
+}
+
+function actionItem(r) {
+  const li = document.createElement('li');
+  const a = document.createElement('a');
+  a.href = r.url; a.target = '_blank'; a.rel = 'noopener';
+  a.textContent = r.org;
+  li.append(a, ' — ' + r.date + ' · ' + r.type + (r.amount_gbp != null ? ' · ' + gbp(r.amount_gbp) : ''));
+  return li;
+}
+
 function showOthers(result) {
   const list = $('others');
   list.innerHTML = '';
@@ -80,6 +117,9 @@ async function respond(question, result) {
   const pick = result.pick;
   showProvision(pick);
   showOthers(result);
+  $('enforcement-wrap').hidden = true;
+  const guidance = showGuidance(question, pick);
+  showRelatedEnforcement(pick);
   $('cite').textContent = pick.ref;
   $('how').textContent = (result.stage === 'chosen' ? 'the provision you chose' : STAGE_LABEL[result.stage] || result.stage) + (result.ms != null ? ' · ' + result.ms + ' ms' : '');
   $('answer-wrap').hidden = false;
@@ -90,7 +130,10 @@ async function respond(question, result) {
   }
   out.textContent = '…';
   try {
-    await answer(question, { ...pick, text: cutAtBoundary(pick.text) }, {
+    // Law first and authoritative; the guidance gets what's left of the budget.
+    const law = cutAtBoundary(pick.text, guidance ? 1800 : 3000);
+    await answer(question, { ...pick, text: law }, {
+      guidance: guidance ? { ...guidance, text: cutAtBoundary(guidance.text, 3000 - law.length) } : null,
       signal: abort.signal,
       onChunk: (text) => { out.textContent = text; },
       onDownload: (f) => { out.textContent = 'Downloading the on-device model… ' + Math.round(f * 100) + '%'; },
@@ -100,9 +143,38 @@ async function respond(question, result) {
   }
 }
 
+// Enforcement questions ("largest fine in 2025", "how many reprimands") are
+// answered by one fixed, parameterised query -- figures straight from rows,
+// never generated -- with the query itself shown underneath.
+function answerEnforcement(question, intent) {
+  const res = runEnforcement(db, intent);
+  $('answer-wrap').hidden = true;
+  $('provision').hidden = true;
+  $('enforcement-wrap').hidden = false;
+  $('e-headline').textContent = describeEnforcement(res);
+  const list = $('e-list');
+  list.innerHTML = '';
+  for (const r of res.rows.slice(0, 25)) list.append(actionItem(r));
+  $('e-more').textContent = res.rows.length > 25 ? '…and ' + (res.rows.length - 25) + ' more.' : '';
+  const chips = $('e-breached');
+  chips.innerHTML = '';
+  $('e-breached-wrap').hidden = !res.breached.length;
+  for (const b of res.breached) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'example';
+    btn.textContent = b.ref + ' (' + b.n + ')';
+    btn.addEventListener('click', () => { $('q').value = 'What does ' + b.ref.replace('UK GDPR ', '').replace('DPA 2018 ', '') + ' say?'; ask($('q').value); });
+    chips.append(btn);
+  }
+  $('e-sql').textContent = res.sql + '\n\nparameters: ' + JSON.stringify(res.params);
+}
+
 async function ask(question) {
   question = question.trim();
   if (!question || !retriever) return;
+  const intent = ico ? enforcementIntent(question) : null;
+  if (intent) { $('status').textContent = ''; answerEnforcement(question, intent); return; }
   $('ask-btn').disabled = true;
   $('status').textContent = 'Finding the provision…';
   try {
@@ -122,7 +194,9 @@ async function main() {
   try {
     const [law, status] = await Promise.all([loadLaw(), modelStatus()]);
     modelOk = status !== 'missing' && status !== 'unavailable';
-    retriever = createRetriever(law.db, { pickModel: modelOk ? pickModel : null });
+    db = law.db;
+    ico = hasIco(db);
+    retriever = createRetriever(db, { pickModel: modelOk ? pickModel : null, bridge: ico ? (q) => bridgeRefs(db, q) : null });
     $('status').textContent = 'Loaded ' + law.rows.toLocaleString() + ' provisions in ' + law.ms + ' ms.';
     $('mode').textContent = modelOk
       ? (status === 'available' ? 'On-device model ready.' : 'On-device model will download on first question.')

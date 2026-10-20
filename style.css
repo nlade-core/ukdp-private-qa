@@ -58,3 +58,13 @@ button { font: inherit; cursor: pointer; }
 .prov-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.92rem; max-height: 70vh; overflow-y: auto; margin-bottom: 10px; padding-right: 4px; }
 
 footer { margin-top: 28px; font-size: 0.78rem; color: var(--muted); display: grid; gap: 6px; max-width: 90ch; }
+
+.guidance { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 4px; }
+.g-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+.g-text { max-height: 40vh; }
+.review { font-size: 0.8rem; background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--fg); border-left: 3px solid var(--warn); padding: 6px 8px; border-radius: 4px; margin-bottom: 8px; }
+.actions { list-style: none; display: grid; gap: 4px; font-size: 0.85rem; margin-top: 8px; }
+.actions li { border-bottom: 1px dotted var(--line); padding-bottom: 4px; }
+.sql { margin-top: 12px; font-size: 0.8rem; color: var(--muted); }
+.sql pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; margin-top: 6px; }
+#related { border-top: 1px solid var(--line); margin-top: 14px; }

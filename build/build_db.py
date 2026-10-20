@@ -18,6 +18,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 from fetch import fetch_all
+import build_ico
 
 NS = '{http://www.legislation.gov.uk/namespaces/legislation}'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -186,13 +187,15 @@ def build():
     """)
     db.executemany('INSERT INTO provisions(act, ref, title, path, text, url, scope) VALUES (?,?,?,?,?,?,?)', rows)
     db.execute("INSERT INTO provisions_fts(provisions_fts) VALUES('rebuild')")
+    ico = add_ico(db, rows)
     fetched = datetime.datetime.fromtimestamp(min(os.path.getmtime(p) for p in paths.values()), datetime.UTC).strftime('%Y-%m-%d')
     db.executemany('INSERT INTO meta VALUES (?,?)', [
         ('source', 'legislation.gov.uk: UK GDPR (eur/2016/679) and Data Protection Act 2018 (ukpga/2018/12)'),
         ('licence', 'Contains public sector information licensed under the Open Government Licence v3.0.'),
         ('fetched', fetched),
         ('note', 'Text as published on legislation.gov.uk on the fetch date; it may not reflect every amendment in force.'),
-    ])
+    ] + ([('ico_source', 'ico.org.uk: UK GDPR guidance and enforcement action. All text content is available under the Open Government Licence v3.0.'),
+          ('ico_fetched', ico['fetched'])] if ico else []))
     db.commit()
     db.execute('VACUUM')
     db.close()
@@ -201,6 +204,67 @@ def build():
     with open(OUT, 'rb') as f, open(OUT + '.gz', 'wb') as raw, gzip.GzipFile(fileobj=raw, mode='wb', compresslevel=9, mtime=0) as g:
         g.write(f.read())
     return rows
+
+
+def resolve_ref(ref, refs, prefixes):
+    """A cited ref -> the most specific ref that exists in the provisions
+    table ("UK GDPR Art. 32(1)(f)" -> "UK GDPR Art. 32(1)"), or None."""
+    r = ref
+    while True:
+        if r in refs or r in prefixes:
+            return r
+        shorter = re.sub(r'\([^()]*\)$', '', r)
+        if shorter == r:
+            return None
+        r = shorter
+
+
+def add_ico(db, rows):
+    """ICO guidance + enforcement + links to the law, if the cache exists."""
+    if not os.path.isdir(build_ico.CACHE):
+        return None
+    guidance, enforcement = build_ico.load()
+    if not guidance and not enforcement:
+        return None
+    refs = {r[1] for r in rows}
+    prefixes = set()
+    for r in refs:
+        for m in re.finditer(r'\(', r):
+            prefixes.add(r[:m.start()])
+    db.executescript("""
+        CREATE TABLE guidance(id INTEGER PRIMARY KEY, title TEXT, section TEXT, text TEXT, url TEXT, topic TEXT, under_review INTEGER);
+        CREATE VIRTUAL TABLE guidance_fts USING fts5(title, section, text, content='guidance', content_rowid='id', tokenize='porter unicode61');
+        CREATE TABLE enforcement(id INTEGER PRIMARY KEY, org TEXT, date TEXT, year INTEGER, type TEXT, sector TEXT, regime TEXT, amount_gbp INTEGER, summary TEXT, url TEXT, notice_url TEXT);
+        CREATE VIRTUAL TABLE enforcement_fts USING fts5(org, type, sector, summary, content='enforcement', content_rowid='id', tokenize='porter unicode61');
+        CREATE TABLE links(kind TEXT, src_id INTEGER, ref TEXT);
+        CREATE INDEX links_ref ON links(ref);
+        CREATE INDEX links_src ON links(kind, src_id);
+    """)
+    review = {g[3] for g in guidance if re.search(r'this guidance is under review', g[2], re.I)}
+    n_links, unresolved = 0, 0
+    for g in guidance:
+        cur = db.execute('INSERT INTO guidance(title, section, text, url, topic, under_review) VALUES (?,?,?,?,?,?)', (*g, int(g[3] in review)))
+        for ref in build_ico.law_refs(g[2]):
+            r = resolve_ref(ref, refs, prefixes)
+            if r:
+                db.execute('INSERT INTO links VALUES (?,?,?)', ('guidance', cur.lastrowid, r)); n_links += 1
+            else:
+                unresolved += 1
+    for e in enforcement:
+        cur = db.execute('INSERT INTO enforcement(org, date, year, type, sector, regime, amount_gbp, summary, url, notice_url) VALUES (?,?,?,?,?,?,?,?,?,?)', e[:10])
+        for ref in e[10]:
+            r = resolve_ref(ref, refs, prefixes)
+            if r:
+                db.execute('INSERT INTO links VALUES (?,?,?)', ('enforcement', cur.lastrowid, r)); n_links += 1
+            else:
+                unresolved += 1
+    db.execute("INSERT INTO guidance_fts(guidance_fts) VALUES('rebuild')")
+    db.execute("INSERT INTO enforcement_fts(enforcement_fts) VALUES('rebuild')")
+    # Links are deduplicated per source row.
+    db.execute('DELETE FROM links WHERE rowid NOT IN (SELECT min(rowid) FROM links GROUP BY kind, src_id, ref)')
+    fetched = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(build_ico.CACHE, 'sitemap.xml')), datetime.UTC).strftime('%Y-%m-%d')
+    return {'guidance': len(guidance), 'pages': len({g[3] for g in guidance}), 'under_review': len(review), 'enforcement': len(enforcement),
+            'links': n_links, 'unresolved': unresolved, 'fetched': fetched}
 
 
 def report(rows):
@@ -213,6 +277,13 @@ def report(rows):
     for ref in ('UK GDPR Art. 6', 'UK GDPR Art. 4(1)(7)', 'DPA 2018 s. 64', 'DPA 2018 Sch. 1 para. 6'):
         r = db.execute('SELECT ref, title, path, substr(text, 1, 160) FROM provisions WHERE ref = ?', (ref,)).fetchone()
         print('\n' + (' | '.join(r) if r else 'MISSING: ' + ref))
+    if db.execute("SELECT count(*) FROM sqlite_master WHERE name='guidance'").fetchone()[0]:
+        g = db.execute('SELECT count(*), count(DISTINCT url), sum(under_review) FROM guidance').fetchone()
+        e = db.execute("SELECT count(*), sum(amount_gbp IS NOT NULL), sum(regime != '') FROM enforcement").fetchone()
+        l = db.execute('SELECT kind, count(*) FROM links GROUP BY kind').fetchall()
+        print('\nICO guidance: %d rows from %d pages (%d rows on pages flagged under review)' % g)
+        print('ICO enforcement: %d actions, %d with an amount, %d with a known regime' % e)
+        print('links to the law:', l)
     print('\nFTS "lawfulness processing":', db.execute("SELECT p.ref FROM provisions_fts JOIN provisions p ON p.id = provisions_fts.rowid WHERE provisions_fts MATCH 'lawfulness processing' ORDER BY bm25(provisions_fts, 10.0, 3.0, 1.0) LIMIT 3").fetchall())
     if gz > MAX_GZ_BYTES:
         sys.exit('gzipped database is over %d MB -- too big to ship as a static file' % (MAX_GZ_BYTES // 1024 // 1024))
